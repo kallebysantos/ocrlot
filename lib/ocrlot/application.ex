@@ -14,7 +14,8 @@ defmodule Ocrlot.Application do
       # Start a worker by calling: Ocrlot.Worker.start_link(arg)
       # {Ocrlot.Worker, arg},
       # Start to serve requests, typically the last entry
-      OcrlotWeb.Endpoint
+      OcrlotWeb.Endpoint,
+      {Task.Supervisor, name: Ocrlot.Converter.TaskSupervisor, strategy: :one_for_one}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
