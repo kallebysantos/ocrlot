@@ -28,15 +28,18 @@ defmodule Ocrlot.Converter do
 
     file_info.pages
     |> Stream.with_index()
-    |> Stream.map(fn {page, idx} -> {page, Path.join(output_folder, "#{idx}.jpeg")} end)
-    |> Enum.each(&convert_async/1)
-  end
+    |> Stream.map(fn {page_path, idx} ->
+      output_path = Path.join(output_folder, "#{idx}.jpeg")
 
-  def convert_async(opts) do
-    Task.Supervisor.start_child(
-      Ocrlot.Converter.TaskSupervisor,
-      fn -> convert(opts) end
-    )
+      Task.Supervisor.async(
+        Ocrlot.Converter.TaskSupervisor,
+        fn ->
+          convert({page_path, output_path})
+        end
+      )
+    end)
+    |> Enum.to_list()
+    |> Task.await_many(30_000)
   end
 
   def convert({input_file, output_path}) do
@@ -53,6 +56,6 @@ defmodule Ocrlot.Converter do
 
     {_, 0} = System.cmd("magick", opts)
 
-    :ok
+    {:ok, output_path}
   end
 end
