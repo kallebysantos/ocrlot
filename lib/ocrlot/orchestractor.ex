@@ -18,24 +18,10 @@ defmodule Ocrlot.Orchestractor do
     {extraction_time, extracted_texts} =
       :timer.tc(fn ->
         converted_pages
-        |> Enum.map(fn {_, image_path} ->
-          # TODO: improve async with worker queue
-          Task.Supervisor.async(Ocrlot.Converter.TaskSupervisor, fn ->
-            case Extractor.WorkerPool.start_child() do
-              {:ok, pid} ->
-                Extractor.Worker.process(pid, %ExtractorPayload{
-                  filepath: image_path,
-                  languages: ["por"]
-                })
-
-              {:error, reason} ->
-                IO.inspect(reason)
-            end
-          end)
-        end)
-        |> Task.await_many(30_000)
         |> Stream.map(&elem(&1, 1))
         |> Enum.with_index()
+        |> extract_pages()
+        |> Enum.sort_by(fn {_, index} -> index end, :asc)
       end)
 
     # seconds
@@ -49,4 +35,63 @@ defmodule Ocrlot.Orchestractor do
 
     extracted_texts
   end
+
+  defp extract_pages(pages, results \\ [])
+
+  defp extract_pages(pages, results) when pages != [] do
+    take = fn
+      {cb, pages, :ok, worker, tasks} when pages != [] ->
+        [{page, index} | pages] = pages
+
+        task =
+          Task.Supervisor.async(Ocrlot.Converter.TaskSupervisor, fn ->
+            {:ok, content} =
+              Extractor.Worker.process(worker, %ExtractorPayload{
+                filepath: page,
+                languages: ["por"]
+              })
+
+            {content, index}
+          end)
+
+        {status, value} = Ocrlot.Extractor.WorkerPool.start_child()
+
+        cb.({cb, pages, status, value, [task | tasks]})
+
+      {_cb, pages, _status, _value, tasks} ->
+        {pages, tasks}
+    end
+
+    {status, value} = Ocrlot.Extractor.WorkerPool.start_child()
+
+    {pages, tasks} =
+      take.({take, pages, status, value, []})
+
+    results = results ++ Task.await_many(tasks, 10_000)
+    dbg()
+
+    extract_pages(pages, results)
+  end
+
+  defp extract_pages(pages, results) when length(pages) === 0,
+    do: results |> dbg()
 end
+
+# converted_pages
+# |> Enum.take(Extractor.WorkerPool.max_children())
+# |> Enum.map(fn {_, image_path} ->
+#   # TODO: improve async with worker queue
+#   Task.Supervisor.async(Ocrlot.Converter.TaskSupervisor, fn ->
+#     case Extractor.WorkerPool.start_child() |> dbg() do
+#       {:ok, pid} ->
+#         Extractor.Worker.process(pid, %ExtractorPayload{
+#           filepath: image_path,
+#           languages: ["por"]
+#         })
+# 
+#       {:error, reason} ->
+#         IO.inspect(reason)
+#     end
+#   end)
+# end)
+# |> Task.await_many(30_000)
