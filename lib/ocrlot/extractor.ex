@@ -1,19 +1,20 @@
 defmodule Ocrlot.Extractor do
-  use GenServer
+  # Maybe restart :temporary?
+  use GenServer, restart: :transient
 
-  defmodule Payload do
+  defmodule(Payload) do
     @enforce_keys :filepath
     defstruct [:filepath, languages: ["eng"]]
   end
 
   # Client APIs
-  def start_link(init_args), do: GenServer.start_link(__MODULE__, init_args)
+  def start_link(args), do: GenServer.start_link(__MODULE__, args)
 
-  def process(pid, params), do: GenServer.call(pid, {:process, params})
+  def process(pid, %Payload{} = params), do: GenServer.call(pid, {:process, params}, 30_000)
 
   # Callbacks
   @impl true
-  def init(init_args), do: {:ok, init_args}
+  def init(args), do: {:ok, args}
 
   @impl true
   def handle_call({:process, %Payload{} = params}, _from, state) do

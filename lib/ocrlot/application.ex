@@ -15,7 +15,8 @@ defmodule Ocrlot.Application do
       # {Ocrlot.Worker, arg},
       # Start to serve requests, typically the last entry
       OcrlotWeb.Endpoint,
-      {Task.Supervisor, name: Ocrlot.Converter.TaskSupervisor, strategy: :one_for_one}
+      {Task.Supervisor, name: Ocrlot.Converter.TaskSupervisor, strategy: :one_for_one},
+      Ocrlot.ExtractorWorkerPool
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
