@@ -1,4 +1,4 @@
-defmodule Ocrlot.Extractor do
+defmodule Ocrlot.Extractor.Worker do
   # Maybe restart :temporary?
   use GenServer, restart: :transient
 

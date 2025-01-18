@@ -1,6 +1,6 @@
 defmodule Ocrlot.Orchestractor do
-  alias Ocrlot.ExtractorWorkerPool
-  alias Ocrlot.Extractor.Payload, as: ExtractorPayload
+  alias Ocrlot.Extractor
+  alias Ocrlot.Extractor.Worker.Payload, as: ExtractorPayload
 
   def pdf_to_text(filepath) do
     temp_folder = System.tmp_dir!()
@@ -21,9 +21,9 @@ defmodule Ocrlot.Orchestractor do
         |> Enum.map(fn {_, image_path} ->
           # TODO: improve async with worker queue
           Task.Supervisor.async(Ocrlot.Converter.TaskSupervisor, fn ->
-            case ExtractorWorkerPool.start_child() do
+            case Extractor.WorkerPool.start_child() do
               {:ok, pid} ->
-                Ocrlot.Extractor.process(pid, %ExtractorPayload{
+                Extractor.Worker.process(pid, %ExtractorPayload{
                   filepath: image_path,
                   languages: ["por"]
                 })

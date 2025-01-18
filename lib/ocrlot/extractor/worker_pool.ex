@@ -1,11 +1,11 @@
-defmodule Ocrlot.ExtractorWorkerPool do
-  alias Ocrlot.Extractor
+defmodule Ocrlot.Extractor.WorkerPool do
+  alias Ocrlot.Extractor.Worker
   use DynamicSupervisor
 
   # Client APIs
   def start_link(args \\ []) do
     # round robin counter
-    {:ok, _} = Agent.start_link(fn -> 0 end, name: Ocrlot.ExtractorWorkerPoolState)
+    {:ok, _} = Agent.start_link(fn -> 0 end, name: Ocrlot.Extractor.WorkerPoolState)
     DynamicSupervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 
@@ -15,9 +15,9 @@ defmodule Ocrlot.ExtractorWorkerPool do
     do: DynamicSupervisor.init(strategy: :one_for_one, max_children: max_children())
 
   def start_child do
-    case DynamicSupervisor.start_child(__MODULE__, Extractor) do
+    case DynamicSupervisor.start_child(__MODULE__, Worker) do
       {:ok, pid} -> {:ok, pid}
-      {:error, :max_children} -> round_robin(3)
+      {:error, :max_children} -> round_robin(max_retries())
       error -> error
     end
   end
@@ -29,7 +29,7 @@ defmodule Ocrlot.ExtractorWorkerPool do
 
       workers ->
         counter =
-          Agent.get_and_update(Ocrlot.ExtractorWorkerPoolState, fn counter ->
+          Agent.get_and_update(Ocrlot.Extractor.WorkerPoolState, fn counter ->
             {counter, counter + 1}
           end)
 
