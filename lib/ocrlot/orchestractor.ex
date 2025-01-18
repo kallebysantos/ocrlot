@@ -1,4 +1,6 @@
 defmodule Ocrlot.Orchestractor do
+  alias Ocrlot.Extractor.Payload, as: ExtractorPayload
+
   def pdf_to_text(filepath) do
     temp_folder = System.tmp_dir!()
 
@@ -16,11 +18,15 @@ defmodule Ocrlot.Orchestractor do
       :timer.tc(fn ->
         converted_pages
         |> Enum.map(fn {_, image_path} ->
-          Task.Supervisor.async(Ocrlot.Converter.TaskSupervisor, fn ->
-            Ocrlot.Extractor.img_to_text(image_path, ["por"])
-          end)
+          # Task.Supervisor.async(Ocrlot.Converter.TaskSupervisor, fn ->
+          Ocrlot.Extractor.img_to_text(%ExtractorPayload{
+            filepath: image_path,
+            languages: ["por"]
+          })
+
+          # end)
         end)
-        |> Task.await_many(10_000)
+        # |> Task.await_many(10_000)
         |> Stream.map(&elem(&1, 1))
         |> Enum.with_index()
       end)
