@@ -1,4 +1,5 @@
 defmodule Ocrlot.Orchestractor do
+  alias Hex.Solver.Constraints.Empty
   alias Ocrlot.Extractor
   alias Ocrlot.Extractor.Worker.Payload, as: ExtractorPayload
 
@@ -54,27 +55,32 @@ defmodule Ocrlot.Orchestractor do
             {content, index}
           end)
 
-        {status, value} = Ocrlot.Extractor.WorkerPool.start_child()
+        if pages !== [] do
+          {status, value} = Ocrlot.Extractor.WorkerPool.start_child()
 
-        cb.({cb, pages, status, value, [task | tasks]})
+          cb.({cb, pages, status, value, [task | tasks]})
+        else
+          {pages, tasks}
+        end
 
       {_cb, pages, _status, _value, tasks} ->
         {pages, tasks}
     end
 
-    {status, value} = Ocrlot.Extractor.WorkerPool.start_child()
+    {status, value} = Ocrlot.Extractor.WorkerPool.start_child() |> dbg()
 
     {pages, tasks} =
       take.({take, pages, status, value, []})
 
     results = results ++ Task.await_many(tasks, 10_000)
-    dbg()
+    # dbg()
 
     extract_pages(pages, results)
   end
 
   defp extract_pages(pages, results) when length(pages) === 0,
-    do: results |> dbg()
+    # |> dbg()
+    do: results
 end
 
 # converted_pages

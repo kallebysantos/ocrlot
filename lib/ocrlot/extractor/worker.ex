@@ -11,26 +11,24 @@ defmodule Ocrlot.Extractor.Worker do
   # Client APIs
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
 
-  def process(pid, %Payload{} = params), do: GenServer.call(pid, {:process, params}, 30_000)
+  def try_lock(pid), do: GenServer.call(pid, :try_lock)
+
+  def process(pid, %Payload{} = params), do: GenServer.call(pid, {:process, params}, 10_000)
 
   # Callbacks
   @impl true
-  def init(args), do: {:ok, args}
+  def init(state), do: {:ok, {state, nil}}
 
   @impl true
-  def handle_call({:process, %Payload{} = params}, _from, state) do
-    result = img_to_text(params)
+  def handle_call(
+        {:process, %Payload{filepath: filepath, languages: langs}},
+        _,
+        {:lock, idle_ref}
+      ) do
+    if is_reference(idle_ref) do
+      Process.cancel_timer(idle_ref)
+    end
 
-    {:reply, result, state}
-  end
-
-  @impl true
-  def handle_info(:terminate, state) do
-    _ = Extractor.WorkerPool.terminate_child(self())
-    {:noreply, state}
-  end
-
-  def img_to_text(%Payload{filepath: filepath, languages: langs}) do
     opts = [
       filepath,
       "-",
@@ -41,13 +39,35 @@ defmodule Ocrlot.Extractor.Worker do
       "6"
     ]
 
-    {text, 0} = System.cmd("tesseract", opts)
+    {result, 0} = System.cmd("tesseract", opts)
 
-    Process.send_after(self(), :terminate, terminate_worker_after())
+    idle_ref = Process.send_after(self(), :terminate, terminate_worker_after())
+    {:reply, {:ok, result}, {:waiting, idle_ref}}
+  end
 
-    {:ok, text}
+  @impl true
+  def handle_call({:process, _}, _, {:waiting, idle_ref}),
+    do: {:reply, {:error, :not_locked}, {:waiting, idle_ref}}
+
+  @impl true
+  def handle_call(:try_lock, _, {:waiting, idle_ref}) do
+    if is_reference(idle_ref) do
+      Process.cancel_timer(idle_ref)
+    end
+
+    {:reply, :ok, {:lock, idle_ref}} |> dbg()
+  end
+
+  @impl true
+  def handle_call(:try_lock, _, {:lock, idle_ref}),
+    do: {:reply, :error, {:lock, idle_ref}} |> dbg()
+
+  @impl true
+  def handle_info(:terminate, state) do
+    _ = Extractor.WorkerPool.terminate_child(self())
+    {:noreply, state}
   end
 
   # defp terminate_worker_after(), do: Application.fetch_env!(:guava, :terminate_worker_after)
-  defp terminate_worker_after(), do: 500
+  defp terminate_worker_after(), do: 20_000
 end
