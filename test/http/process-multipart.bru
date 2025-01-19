@@ -1,0 +1,15 @@
+meta {
+  name: process-multipart
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/process
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(/Users/kallebysantos/projects/personal/ocrlot/tmp/HGLG11.pdf)
+}

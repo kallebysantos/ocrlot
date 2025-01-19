@@ -7,6 +7,8 @@ defmodule OcrlotWeb.Router do
 
   scope "/api", OcrlotWeb do
     pipe_through :api
+
+    post "/process", OcrController, :handle_process
   end
 
   # Enable LiveDashboard in development

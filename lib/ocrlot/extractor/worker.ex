@@ -55,12 +55,12 @@ defmodule Ocrlot.Extractor.Worker do
       Process.cancel_timer(idle_ref)
     end
 
-    {:reply, :ok, {:lock, idle_ref}} |> dbg()
+    {:reply, :ok, {:lock, idle_ref}}
   end
 
   @impl true
   def handle_call(:try_lock, _, {:lock, idle_ref}),
-    do: {:reply, :error, {:lock, idle_ref}} |> dbg()
+    do: {:reply, :error, {:lock, idle_ref}}
 
   @impl true
   def handle_info(:terminate, state) do

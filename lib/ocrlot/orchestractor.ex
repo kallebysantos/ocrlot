@@ -1,5 +1,4 @@
 defmodule Ocrlot.Orchestractor do
-  alias Hex.Solver.Constraints.Empty
   alias Ocrlot.Extractor
   alias Ocrlot.Extractor.Worker.Payload, as: ExtractorPayload
 
@@ -67,7 +66,7 @@ defmodule Ocrlot.Orchestractor do
         {pages, tasks}
     end
 
-    {status, value} = Ocrlot.Extractor.WorkerPool.start_child() |> dbg()
+    {status, value} = Ocrlot.Extractor.WorkerPool.start_child()
 
     {pages, tasks} =
       take.({take, pages, status, value, []})
