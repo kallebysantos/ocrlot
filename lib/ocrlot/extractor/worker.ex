@@ -1,17 +1,14 @@
 defmodule Ocrlot.Extractor.Worker do
+  alias Ocrlot.Extractor.Payload
   alias Ocrlot.Extractor
+
   # Maybe restart :temporary?
   use GenServer, restart: :transient
-
-  defmodule(Payload) do
-    @enforce_keys :filepath
-    defstruct [:filepath, languages: ["eng"]]
-  end
 
   # Client APIs
   def start_link(args), do: GenServer.start_link(__MODULE__, args)
 
-  def try_lock(pid), do: GenServer.call(pid, :try_lock)
+  def try_lock(pid), do: GenServer.call(pid, :try_lock, 10_000)
 
   def process(pid, %Payload{} = params), do: GenServer.call(pid, {:process, params}, 10_000)
 

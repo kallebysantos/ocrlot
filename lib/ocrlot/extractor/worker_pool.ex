@@ -16,10 +16,6 @@ defmodule Ocrlot.Extractor.WorkerPool do
   def init(_args),
     do: DynamicSupervisor.init(strategy: :one_for_one, max_children: max_children())
 
-  # def start_child, do: DynamicSupervisor.start_child(__MODULE__, {Worker, [:lock]})
-
-  # def get_child, do: round_robin(max_retries())
-
   def start_child do
     case DynamicSupervisor.start_child(__MODULE__, {Worker, :lock}) do
       {:ok, pid} -> {:ok, pid}
@@ -55,6 +51,6 @@ defmodule Ocrlot.Extractor.WorkerPool do
   defp round_robin(0), do: {:error, :no_workers_available}
 
   # defp max_children(), do: Application.fetch_env!(:guava, :concurent_task_limit)
-  def max_children(), do: 10
+  def max_children(), do: 3
   # defp max_retries(), do: 3
 end
