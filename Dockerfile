@@ -18,4 +18,6 @@ RUN mix local.hex --force; \
 
 RUN chmod +x ./entrypoint.sh
 
+EXPOSE 4000
+
 CMD ./entrypoint.sh
