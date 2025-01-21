@@ -50,7 +50,5 @@ defmodule Ocrlot.Extractor.WorkerPool do
 
   defp round_robin(0), do: {:error, :no_workers_available}
 
-  # defp max_children(), do: Application.fetch_env!(:guava, :concurent_task_limit)
-  def max_children(), do: 3
-  # defp max_retries(), do: 3
+  defp max_children(), do: Application.fetch_env!(:ocrlot, :extractor_max_workers) |> dbg()
 end

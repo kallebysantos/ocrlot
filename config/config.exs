@@ -8,7 +8,9 @@
 import Config
 
 config :ocrlot,
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  # Each worker can take ~120Mib
+  extractor_max_workers: String.to_integer(System.get_env("EXTRACTOR_MAX_WORKERS") || "1")
 
 # Configures the endpoint
 config :ocrlot, OcrlotWeb.Endpoint,
