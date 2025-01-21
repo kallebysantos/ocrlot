@@ -17,7 +17,7 @@ defmodule Ocrlot.Extractor.WorkerPool do
     do: DynamicSupervisor.init(strategy: :one_for_one, max_children: max_children())
 
   def start_child do
-    case DynamicSupervisor.start_child(__MODULE__, {Worker, :lock}) do
+    case DynamicSupervisor.start_child(__MODULE__, Worker) do
       {:ok, pid} -> {:ok, pid}
       {:error, :max_children} -> round_robin(max_children())
       error -> error
@@ -36,11 +36,8 @@ defmodule Ocrlot.Extractor.WorkerPool do
           end)
 
         case Enum.at(workers, rem(counter, length(workers))) do
-          {:undefined, pid, _, _} ->
-            case Worker.try_lock(pid) do
-              :ok -> {:ok, pid}
-              _ -> round_robin(retries - 1)
-            end
+          {:undefined, worker_pid, _, _} ->
+            {:ok, worker_pid}
 
           _ ->
             round_robin(retries - 1)
@@ -50,5 +47,5 @@ defmodule Ocrlot.Extractor.WorkerPool do
 
   defp round_robin(0), do: {:error, :no_workers_available}
 
-  defp max_children(), do: Application.fetch_env!(:ocrlot, :extractor_max_workers) |> dbg()
+  defp max_children(), do: Application.fetch_env!(:ocrlot, :extractor_max_workers)
 end

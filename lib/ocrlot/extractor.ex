@@ -18,8 +18,8 @@ defmodule Ocrlot.Extractor do
   end
 
   defmodule Result do
-    @enforce_keys [:filepath, :content]
-    defstruct [:filepath, :content]
+    @enforce_keys [:content]
+    defstruct [:content]
   end
 
   ## Public API
@@ -31,37 +31,46 @@ defmodule Ocrlot.Extractor do
   def init(%Args{} = args) do
     PubSub.subscribe(Ocrlot.PubSub, args.in)
 
-    {:ok, args}
+    process_refs = %{}
+
+    {:ok, {args, process_refs}}
   end
 
   @impl true
-  def handle_info({:process, %Payload{} = payload, metadata}, %Args{} = state) do
+  def handle_info({:process, %Payload{} = payload, metadata}, {%Args{} = args, process_refs}) do
     case WorkerPool.start_child() do
       {:ok, worker} ->
-        Task.Supervisor.start_child(Ocrlot.Converter.TaskSupervisor, fn ->
-          {:ok, content} = Worker.process(worker, payload)
+        {:ok, process_id} = Worker.process(worker, payload, self())
 
-          result = %Result{
-            filepath: payload.filepath,
-            content: content
-          }
+        process_refs = Map.put(process_refs, process_id, metadata)
 
-          message = state.mapper.({result, metadata})
-
-          PubSub.broadcast(Ocrlot.PubSub, state.out, message)
-        end)
+        {:noreply, {args, process_refs}}
 
       {:error, :max_children} ->
-        requeue(payload)
-    end
+        requeue(payload, metadata)
 
-    {:noreply, state}
+        {:noreply, {args, process_refs}}
+    end
   end
 
   @impl true
-  def handle_info({:requeue, %Payload{} = payload}, state) do
-    PubSub.local_broadcast(Ocrlot.PubSub, state.in, {:process, payload})
-    {:noreply, state}
+  def handle_info(
+        {:extractor_worker_complete, process_id, %Result{} = result},
+        {%Args{} = args, process_refs}
+      ) do
+    {metadata, process_refs} = Map.pop(process_refs, process_id)
+
+    message = args.mapper.({result, metadata})
+
+    PubSub.broadcast(Ocrlot.PubSub, args.out, message)
+
+    {:noreply, {args, process_refs}}
+  end
+
+  @impl true
+  def handle_info({:requeue, %Payload{} = payload, metadata}, {%Args{} = args, process_refs}) do
+    PubSub.local_broadcast(Ocrlot.PubSub, args.in, {:process, payload, metadata})
+    {:noreply, {args, process_refs}}
   end
 
   @impl true
@@ -72,7 +81,7 @@ defmodule Ocrlot.Extractor do
     {:noreply, state}
   end
 
-  defp requeue(%Payload{} = payload) do
-    Process.send_after(self(), {:requeue, payload}, 3_000)
+  defp requeue(%Payload{} = payload, metadata) do
+    Process.send_after(self(), {:requeue, payload, metadata}, 3_000)
   end
 end

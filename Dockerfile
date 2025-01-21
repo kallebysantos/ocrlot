@@ -1,4 +1,4 @@
-FROM elixir:1.14.2
+FROM elixir:1.17-otp-27-slim
 
 # Update registry and install tesseract and dependencies
 RUN apt-get update -qq \
