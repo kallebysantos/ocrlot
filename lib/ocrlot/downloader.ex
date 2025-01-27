@@ -20,7 +20,7 @@ defmodule Ocrlot.Downloader do
     end
   end
 
-  def get_file({:bytes, file_url}, opts) do
+  def get_file({:bytes, file_url}, opts \\ []) do
     with {:ok, file_bytes} <- donwload(file_url, opts),
          {:ok, file_prefix} <- get_url_hash(file_url),
          {:ok, file_path} <- Plug.Upload.random_file(file_prefix),
