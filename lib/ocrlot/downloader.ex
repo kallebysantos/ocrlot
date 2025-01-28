@@ -20,7 +20,11 @@ defmodule Ocrlot.Downloader do
     end
   end
 
-  def get_file({:bytes, file_url}, opts \\ []) do
+  def get_file(command, opts \\ [])
+
+  def get_file({:base64, _file_url}, _opts), do: {:error, :not_implemented}
+
+  def get_file(file_url, opts) do
     with {:ok, file_bytes} <- donwload(file_url, opts),
          {:ok, file_prefix} <- get_url_hash(file_url),
          {:ok, file_path} <- Plug.Upload.random_file(file_prefix),
@@ -28,8 +32,6 @@ defmodule Ocrlot.Downloader do
       {:ok, file_path}
     end
   end
-
-  def get_file({:base64, _file_url}, _opts), do: {:error, :not_implemented}
 
   def get_url_hash(url) do
     url_hash =

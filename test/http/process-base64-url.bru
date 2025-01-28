@@ -1,0 +1,21 @@
+meta {
+  name: process-base64-url
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/process
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "url": "https://fnet.bmfbovespa.com.br/fnet/publico/exibirDocumento?id=819728&cvm=true",
+    "options": {
+      "insecure": true,
+      "document_type": "base64"
+    }
+  }
+}

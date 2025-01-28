@@ -6,9 +6,9 @@ RUN apt-get update -qq \
   poppler-utils \
   libtesseract-dev \
   libleptonica-dev \
-  tesseract-ocr-por
+  tesseract-ocr-all
 
-WORKDIR app
+WORKDIR ~/app
 
 COPY . .
 
